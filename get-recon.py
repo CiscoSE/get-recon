@@ -9,7 +9,6 @@ import multiprocessing
 import socket
 # import sys
 hosts = []
-junk = 0
 hostscan = {}
 
 def nmap():
