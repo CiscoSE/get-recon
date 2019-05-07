@@ -1,13 +1,13 @@
 ''' a quick project to take the output from an nmap scan and run it 
 through a series of checks.  configure integration with openvas.
-Maybe add logging? '''
+'''
 
 import subprocess
-# import sys
+import logging.handlers
 import json
 import multiprocessing
 import socket
-
+# import sys
 hosts = []
 junk = 0
 hostscan = {}
@@ -21,26 +21,37 @@ def nmap():
 def hostlist(output):
     for line in output:
         if '[host down]' in line:
-            junk = 0
+            logger.debug('hostlist [host down] ' + line)
         elif 'Nmap scan report for' in line:
             hosts.append(line[21:])
         else:
-            junk = 0
+            logger.debug('hostlist junk line ' + line)
     outfile=open('live-hosts.txt', 'w+')
     for line in hosts:
         outfile.write(line + '\n')
     outfile.close()
     return hosts
 def hostscanfunc(line):
-    print(line)
+    logger.info('hostscanfunc ' + line)
     nmap = subprocess.Popen(['nmap', '-A', '-T4', line], stdout=subprocess.PIPE)
     output = list(nmap.communicate()[0].decode("utf-8").split('\n'))
     hostscan[line] = output
     # return hostscan
 if __name__ == '__main__':
+    logger = logging.getLogger('get-recon')
+    logger.setLevel(logging.DEBUG)
+    logfile = logging.handlers.RotatingFileHandler('get-recon.log', maxBytes=100000, backupCount=3)
+    logfile.setLevel(logging.DEBUG)
+    console = logging.StreamHandler()
+    console.setLevel(logging.WARN)
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    logfile.setFormatter(formatter)
+    console.setFormatter(formatter)
+    logger.addHandler(logfile)
+    logger.addHandler(console)
     output = nmap()
     hosts = hostlist(output)
-    print(hosts)
+    logger.debug('main ' + str(hosts))
     pool_size = 4
     manager = multiprocessing.Manager()
     hostscan = manager.dict()
